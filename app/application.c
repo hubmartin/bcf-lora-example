@@ -1,5 +1,4 @@
 #include <application.h>
-#include <bc_cmwx1zzabz.h>
 
 // LED instance
 bc_led_t led;
@@ -11,9 +10,6 @@ bc_button_t button;
 // AT+UART=9600\r
 bc_cmwx1zzabz_t lora;
 
-// GPIO to enable LoRa TXCO
-bc_gpio_channel_t lora_gpio_TXCO = BC_GPIO_P8;
-
 void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
 {
     if (event == BC_BUTTON_EVENT_PRESS)
@@ -24,9 +20,6 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
 
 void lora_callback(bc_cmwx1zzabz_t *self, bc_cmwx1zzabz_event_t event, void *event_param)
 {
-    volatile int a = 0;
-    a++;
-
     if (event == BC_CMWX1ZZABZ_EVENT_READY)
     {
         volatile char deveui[20];
@@ -38,19 +31,32 @@ void lora_callback(bc_cmwx1zzabz_t *self, bc_cmwx1zzabz_event_t event, void *eve
 
     if (event == BC_CMWX1ZZABZ_EVENT_ERROR)
     {
-        //bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
+        bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
     }
 
     if (event == BC_CMWX1ZZABZ_EVENT_SEND_RF_FRAME_START)
     {
         bc_led_set_mode(&led, BC_LED_MODE_ON);
-        bc_gpio_set_output(lora_gpio_TXCO, 1);
     }
 
     if (event == BC_CMWX1ZZABZ_EVENT_SEND_RF_FRAME_DONE)
     {
         bc_led_set_mode(&led, BC_LED_MODE_OFF);
-        bc_gpio_set_output(lora_gpio_TXCO, 0);
+    }
+
+    if (event == BC_CMWX1ZZABZ_EVENT_MESSAGE_RECEIVED)
+    {
+        volatile uint8_t port = bc_cmwx1zzabz_get_received_message_port(self);
+        volatile uint32_t length = bc_cmwx1zzabz_get_received_message_length(self);
+
+        uint8_t msg_buffer[51];
+        volatile uint32_t len = bc_cmwx1zzabz_get_received_message_data(self, msg_buffer, sizeof(msg_buffer));
+
+        bc_led_pulse(&led, 800);
+
+        port++;
+        length++;
+        len++;
     }
 }
 
@@ -71,33 +77,22 @@ void application_init(void)
     //bc_cmwx1zzabz_set_nwkskey(&lora, "4457FAD1D73C3B7D4C2EDBAE6EBDA740");
 
     bc_cmwx1zzabz_set_band(&lora, BC_CMWX1ZZABZ_CONFIG_BAND_EU868);
-    bc_cmwx1zzabz_set_mode(&lora, BC_CMWX1ZZABZ_CONFIG_MODE_OTAA);
+    bc_cmwx1zzabz_set_mode(&lora, BC_CMWX1ZZABZ_CONFIG_MODE_ABP);
+    bc_cmwx1zzabz_set_class(&lora, BC_CMWX1ZZABZ_CONFIG_CLASS_A);
 
-    bc_cmwx1zzabz_join(&lora);
-
-    volatile char deveui[16];
-    bc_cmwx1zzabz_get_deveui(&lora, (char*)deveui);
-
-
-    bc_gpio_init(lora_gpio_TXCO);
-    bc_gpio_set_output(lora_gpio_TXCO, 0);
-    bc_gpio_set_mode(lora_gpio_TXCO, BC_GPIO_MODE_OUTPUT);
+    //bc_cmwx1zzabz_join(&lora);
 }
 
 void application_task()
 {
-    
-
     if (!bc_cmwx1zzabz_is_ready(&lora))
     {
         bc_scheduler_plan_current_relative(200);
         return;
     }
 
-    //uint8_t buffer[] = {'A', 'B', 'C'};
-    //bc_cmwx1zzabz_send_message(&lora, buffer, sizeof(buffer) );
+    uint8_t buffer[] = {'A', 'B', 'C'};
+    bc_cmwx1zzabz_send_message(&lora, buffer, sizeof(buffer) );
 
     // do not plan this task anymore
 }
-
-
