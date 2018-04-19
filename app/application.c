@@ -19,14 +19,15 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
 }
 
 void lora_callback(bc_cmwx1zzabz_t *self, bc_cmwx1zzabz_event_t event, void *event_param)
-{
+{ 
     if (event == BC_CMWX1ZZABZ_EVENT_READY)
     {
         volatile char deveui[20];
         volatile char devaddr[20];
         bc_cmwx1zzabz_get_deveui(&lora, (char*)deveui);
         bc_cmwx1zzabz_get_devaddr(&lora, (char*)devaddr);
-        deveui[0] = 0;
+        
+        bc_led_pulse(&led, 50);
     }
 
     if (event == BC_CMWX1ZZABZ_EVENT_ERROR)
@@ -34,12 +35,17 @@ void lora_callback(bc_cmwx1zzabz_t *self, bc_cmwx1zzabz_event_t event, void *eve
         bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
     }
 
-    if (event == BC_CMWX1ZZABZ_EVENT_SEND_RF_FRAME_START)
+    if (event == BC_CMWX1ZZABZ_EVENT_JOIN_ERROR)
+    {
+        bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
+    }
+
+    if (event == BC_CMWX1ZZABZ_EVENT_SEND_MESSAGE_START)
     {
         bc_led_set_mode(&led, BC_LED_MODE_ON);
     }
 
-    if (event == BC_CMWX1ZZABZ_EVENT_SEND_RF_FRAME_DONE)
+    if (event == BC_CMWX1ZZABZ_EVENT_SEND_MESSAGE_DONE)
     {
         bc_led_set_mode(&led, BC_LED_MODE_OFF);
     }
@@ -54,9 +60,9 @@ void lora_callback(bc_cmwx1zzabz_t *self, bc_cmwx1zzabz_event_t event, void *eve
 
         bc_led_pulse(&led, 800);
 
-        port++;
-        length++;
-        len++;
+        (void) len;
+        (void) length;
+        (void) port;
     }
 }
 
